@@ -8,7 +8,7 @@ to be re-fetched from the source servers on every use.
 
 | Path | Source | Fetched | Size | SHA-256 |
 | --- | --- | --- | --- | --- |
-| `kautian/kautian.db` | Pre-built SQLite conversion of `kautian.ods` (provenance of this specific build not tracked; see note below) | uploaded 2026-07-24 | 9.76 MB | `b59644b4efd96cee19b02d07be22ba0b33f73364e5740bf89ceb7e150138320b` |
+| `kautian/kautian.db` | SQLite conversion of `kautian.ods` (rebuilt directly from the ODS row below — same fetch, all 19 sheets, full provenance) | rebuilt 2026-07-24 | 9.79 MB | `b989a5dd05d0eff43a34d72338c5aba8b8f11d1858fd7bc4c0f8415fe323a8df` |
 | `kautian/kautian.ods` | [sutian.moe.edu.tw/media/senn/ods/kautian.ods](https://sutian.moe.edu.tw/media/senn/ods/kautian.ods) | 2026-07-24 | 4.47 MB | `55fd06dc98b0499449870e6abd7ca545ab9f9ef51754ffa8c2ff17359eca162b` |
 | `concised/dict_concised_2014_20260626.zip` | [language.moe.gov.tw — 《國語辭典簡編本》資料下載](https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_concised_download.html) | 2026-07-24 | 6.94 MB | `fc83d27eb3fbf6fcfdb791e7d05ef60946b58ef8e8857ed165b612217b392806` |
 | `concised/concised.db` | SQLite conversion of the xlsx inside the zip above, built by `concised/build_concised_db.py` (stdlib-only, in this repo — reproducible from the zip) | 2026-07-24 | 11 MB | `31caa12c38b7b1d0d7aaed978ce82500a3f5d11130a3d3b42ac36b0f64171c35` |
@@ -17,10 +17,9 @@ to be re-fetched from the source servers on every use.
 
 `kautian.ods` and `kautian.db` cover the same underlying dictionary
 (教育部臺灣台語常用詞辭典 — MOE Taiwanese Hokkien Common Words Dictionary).
-As of this fetch, the live `kautian.ods` contains more rows than the
-`kautian.db` build stored here (e.g. 29,592 vs. 28,967 headword rows) — MOE
-has published newer content since `kautian.db` was last built. Both are kept
-as-is; no reconciliation between them has been done in this repo.
+`kautian.db` is rebuilt directly from this `kautian.ods` fetch (all 19 sheets,
+schema matched to the previous build), so the two are in sync as of
+2026-07-24 (29,591 headword rows in both).
 
 The Concised dictionary (《國語辭典簡編本》) is MOE's Mandarin dictionary
 edited for students and learners of Mandarin — a separate work from the
