@@ -11,6 +11,7 @@ to be re-fetched from the source servers on every use.
 | `kautian/kautian.db` | Pre-built SQLite conversion of `kautian.ods` (provenance of this specific build not tracked; see note below) | uploaded 2026-07-24 | 9.76 MB | `b59644b4efd96cee19b02d07be22ba0b33f73364e5740bf89ceb7e150138320b` |
 | `kautian/kautian.ods` | [sutian.moe.edu.tw/media/senn/ods/kautian.ods](https://sutian.moe.edu.tw/media/senn/ods/kautian.ods) | 2026-07-24 | 4.47 MB | `55fd06dc98b0499449870e6abd7ca545ab9f9ef51754ffa8c2ff17359eca162b` |
 | `concised/dict_concised_2014_20260626.zip` | [language.moe.gov.tw — 《國語辭典簡編本》資料下載](https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/dict_concised_download.html) | 2026-07-24 | 6.94 MB | `fc83d27eb3fbf6fcfdb791e7d05ef60946b58ef8e8857ed165b612217b392806` |
+| `concised/concised.db` | SQLite conversion of the xlsx inside the zip above, built by `concised/build_concised_db.py` (stdlib-only, in this repo — reproducible from the zip) | 2026-07-24 | 11 MB | `31caa12c38b7b1d0d7aaed978ce82500a3f5d11130a3d3b42ac36b0f64171c35` |
 | `audio/sutiau-mp3.zip` | [sutian.moe.edu.tw/media/senn/sutiau-mp3.zip](https://sutian.moe.edu.tw/media/senn/sutiau-mp3.zip) (headword audio) | 2026-07-24 | 305.5 MB | `1d7375fe704999309f263e6372b34e3af923c398ea980ca2158ebc1a39b905a9` |
 | `audio/leku-mp3.zip` | [sutian.moe.edu.tw/media/senn/leku-mp3.zip](https://sutian.moe.edu.tw/media/senn/leku-mp3.zip) (example-sentence audio) | 2026-07-24 | 528.0 MB | `76078c800f26896aae83223c04e134e8685d02d2d96617f1ed811ec987af2d06` |
 
