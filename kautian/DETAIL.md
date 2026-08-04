@@ -159,11 +159,21 @@ For production, move to R2 with `Content-Type: application/octet-stream`,
 `ExposeHeaders: ["Content-Range"]`, and zone-level Brotli and Auto Minify
 confirmed not to apply to the path. Only the base URL changes.
 
+## The Mandarin sibling
+
+`concised/v1/` is the same kind of container for 《國語辭典簡編本》, covering the
+臺華共同詞 headwords that have no Taiwanese detail here. It is written by this
+directory's `detail/container.py` — same header width, index, sentinel and
+`Range` addressing, over the same kautian id space — differing only in its
+magic, `CNDETAIL1`. Changing `container.py` changes both containers. See
+`concised/CONCISED_DETAIL.md`.
+
 ## Rebuilding
 
 ```
 python3 kautian/build_detail.py --db kautian/kautian.db --out kautian/v1/
 python3 -m unittest discover -s kautian/tests
+python3 -m unittest discover -s concised/tests
 ```
 
 `detail.bin` and `detail.idx` are byte-identical across rebuilds of the same

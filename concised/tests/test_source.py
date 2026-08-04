@@ -1,0 +1,62 @@
+import tempfile
+import unittest
+
+from concised.detail import source
+from support import build_dbs, entry, headword
+
+
+class TestRead(unittest.TestCase):
+    def read(self, headwords, entries):
+        kautian_db, concised_db = build_dbs(tempfile.mkdtemp(), headwords, entries)
+        return source.read(kautian_db, concised_db)
+
+    def test_only_臺華共同詞_headwords_are_read(self):
+        headwords, _, _ = self.read(
+            [
+                headword(1, "一刀兩斷", "主詞目"),
+                headword(17743, "人品"),
+                headword(3522, "事", "單字不成詞者"),
+            ],
+            [],
+        )
+        self.assertEqual(headwords, [(17743, "人品")])
+
+    def test_the_join_key_drops_the_替_marker(self):
+        headwords, _, _ = self.read([headword(1, "乜【替】")], [])
+        self.assertEqual(headwords, [(1, "乜")])
+
+    def test_max_id_spans_the_whole_kautian_id_space_not_just_臺華共同詞(self):
+        _, _, max_id = self.read(
+            [headword(17743, "人品"), headword(30284, "尾", "主詞目")],
+            [],
+        )
+        self.assertEqual(max_id, 30284)
+
+    def test_entries_are_keyed_by_字詞名(self):
+        _, entries, _ = self.read([], [entry("人品", 釋義="人的品格。")])
+        self.assertEqual(list(entries), ["人品"])
+        self.assertEqual(entries["人品"][0]["釋義"], "人的品格。")
+
+    def test_a_多音_name_keeps_every_row_ordered_by_多音排序(self):
+        _, entries, _ = self.read(
+            [],
+            [
+                entry("扒", number="0297", order="2", 漢語拼音="pá"),
+                entry("扒", number="0023", order="1", 漢語拼音="bā"),
+            ],
+        )
+        self.assertEqual([row["漢語拼音"] for row in entries["扒"]], ["bā", "pá"])
+
+    def test_多音排序_orders_numerically_not_as_text(self):
+        _, entries, _ = self.read(
+            [],
+            [
+                entry("扒", number="a", order="10", 漢語拼音="tenth"),
+                entry("扒", number="b", order="9", 漢語拼音="ninth"),
+            ],
+        )
+        self.assertEqual([row["漢語拼音"] for row in entries["扒"]], ["ninth", "tenth"])
+
+
+if __name__ == "__main__":
+    unittest.main()

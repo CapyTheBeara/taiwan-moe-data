@@ -1,0 +1,14 @@
+{
+  "buildDate": "2026-08-04",
+  "concisedDbSha256": "31caa12c38b7b1d0d7aaed978ce82500a3f5d11130a3d3b42ac36b0f64171c35",
+  "containerBytes": 1274921,
+  "generatorCommit": "6bfeba6262003a47fd7639d7b15e3f975ed42aea",
+  "headerBytes": 16,
+  "kautianDbSha256": "b989a5dd05d0eff43a34d72338c5aba8b8f11d1858fd7bc4c0f8415fe323a8df",
+  "liveIds": 4603,
+  "maxId": 30284,
+  "sentinel": {
+    "head": "7b22636f6e6369736564223a5b7b22e5ad97e8a99ee5908d223a22e4babae593",
+    "id": 17743
+  }
+}

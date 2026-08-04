@@ -19,6 +19,18 @@ class TestEncode(unittest.TestCase):
         self.assertEqual(len(blob.decode("utf-8")), 9)
 
 
+class TestMagic(unittest.TestCase):
+    def test_the_kautian_header_is_unchanged_so_rebuilds_stay_byte_identical(self):
+        self.assertEqual(container.HEADER, b"KTDETAIL1" + b"\x00" * 7)
+
+    def test_a_name_is_padded_with_NUL_to_the_header_width(self):
+        self.assertEqual(container.magic("CNDETAIL1"), b"CNDETAIL1" + b"\x00" * 7)
+
+    def test_a_name_too_long_to_leave_a_NUL_is_refused(self):
+        with self.assertRaises(ValueError):
+            container.magic("X" * 17)
+
+
 class TestWrite(unittest.TestCase):
     def setUp(self):
         self.out = Path(tempfile.mkdtemp())
