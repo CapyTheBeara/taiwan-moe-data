@@ -25,6 +25,21 @@ The Concised dictionary (《國語辭典簡編本》) is MOE's Mandarin dictiona
 edited for students and learners of Mandarin — a separate work from the
 Hokkien dictionary above.
 
+## Derived containers
+
+Two range-fetchable containers are built from the databases above, so a browser
+can read one headword's detail over HTTP without a server and without SQLite.
+They share a format and a client; each has its own contract document.
+
+| Path | Built from | Contract | Records |
+| --- | --- | --- | --- |
+| `kautian/v1/` | `kautian/kautian.db` | `kautian/DETAIL.md` | 18,031 Taiwanese headwords |
+| `concised/v1/` | `concised/concised.db` + `kautian/kautian.db` | `concised/CONCISED_DETAIL.md` | 4,603 臺華共同詞 headwords, Mandarin |
+
+Both are indexed by kautian `詞目id`, and no id is live in both — the Taiwanese
+and Mandarin datasets stay separate, so a client always knows which dictionary a
+record came from.
+
 ## License
 
 All dictionary text and audio in this repository is published by the
