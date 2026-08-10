@@ -5,12 +5,14 @@ detail container: detail.bin (concatenated JSON records), detail.idx (uint16
 record lengths) and meta.json, indexed by kautian 詞目id so a client addresses
 this container exactly as it addresses kautian/v1/.
 
-Only 臺華共同詞 headwords get a record. Stdlib-only. Deterministic: detail.bin
-and detail.idx are byte-identical across rebuilds of the same two databases.
+Only the entry-less headword types get a record — 臺華共同詞 and 單字不成詞者,
+the two the dictionary leaves with no 義項 of their own that the Concised
+dictionary can still speak to. Stdlib-only. Deterministic: detail.bin and
+detail.idx are byte-identical across rebuilds of the same two databases.
 
 Usage:
     python3 concised/build_concised_detail.py --kautian-db kautian/kautian.db \
-        --concised-db concised/concised.db --out concised/v1/
+        --concised-db concised/concised.db --out concised/v2/
 """
 
 import argparse
@@ -45,7 +47,7 @@ def main(argv=None):
     }
     meta = container.write(built, max_id, args.out, provenance, container.magic(MAGIC))
     print(
-        f"{meta['liveIds']} of {len(headwords)} 臺華共同詞 matched, "
+        f"{meta['liveIds']} of {len(headwords)} entry-less headwords matched, "
         f"{meta['containerBytes']} B, max id {max_id}"
     )
     return 0

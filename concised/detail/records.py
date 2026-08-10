@@ -24,7 +24,7 @@ def entry(row):
 
 
 def build(headwords, entries):
-    """Shape one record per 臺華共同詞 headword the Concised dictionary covers."""
+    """Shape one record per entry-less headword the Concised dictionary covers."""
     records = {}
     for word_id, name in headwords:
         rows = [shaped for shaped in (entry(row) for row in entries.get(name, ())) if shaped]

@@ -1,10 +1,30 @@
+import importlib.util
 import sqlite3
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
 
 from concised.detail.records import COLUMNS
+
+
+def _load_kautian_support():
+    """kautian's own test support, by path — its tests package is not importable.
+
+    The concised container now has to know which ids kautian/v1 already covers,
+    so its fixtures need kautian's full detail schema. Borrowing the builder
+    keeps that schema defined once, where kautian's own tests will notice it
+    drifting.
+    """
+    path = ROOT / "kautian" / "tests" / "support.py"
+    spec = importlib.util.spec_from_file_location("kautian_test_support", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+kautian_support = _load_kautian_support()
 
 CONCISED_COLUMNS = (
     "字詞名",
@@ -24,29 +44,23 @@ CONCISED_COLUMNS = (
     "多音參見訊息",
 )
 
-KAUTIAN_COLUMNS = ("詞目id", "詞目類型", "漢字", "羅馬字", "分類", "羅馬字音檔檔名")
+def build_dbs(directory, headwords, entries, kautian_rows=None):
+    """Write a synthetic kautian.db and concised.db holding only what a test needs.
 
-
-def _create(connection, table, columns, rows):
-    declared = ", ".join(f'"{column}"' for column in columns)
-    connection.execute(f'create table "{table}" ({declared})')
-    marks = ", ".join("?" * len(columns))
-    for row in rows:
-        connection.execute(f'insert into "{table}" values ({marks})', row)
-
-
-def build_dbs(directory, headwords, entries):
-    """Write a synthetic kautian.db and concised.db holding only what a test needs."""
+    kautian_rows adds detail rows (異用字, 義項, …) for a headword, which is how a
+    test says "kautian/v1 already covers this id".
+    """
     kautian_db = Path(directory) / "kautian.db"
     concised_db = Path(directory) / "concised.db"
 
-    connection = sqlite3.connect(kautian_db)
-    _create(connection, "詞目", KAUTIAN_COLUMNS, headwords)
-    connection.commit()
-    connection.close()
+    kautian_support.build_db(kautian_db, {"詞目": headwords, **(kautian_rows or {})})
 
     connection = sqlite3.connect(concised_db)
-    _create(connection, "concised", CONCISED_COLUMNS, entries)
+    declared = ", ".join(f'"{column}"' for column in CONCISED_COLUMNS)
+    connection.execute(f'create table "concised" ({declared})')
+    marks = ", ".join("?" * len(CONCISED_COLUMNS))
+    for row in entries:
+        connection.execute(f"insert into concised values ({marks})", row)
     connection.commit()
     connection.close()
 
