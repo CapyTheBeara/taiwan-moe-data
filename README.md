@@ -34,7 +34,7 @@ They share a format and a client; each has its own contract document.
 | Path | Built from | Contract | Records |
 | --- | --- | --- | --- |
 | `kautian/v1/` | `kautian/kautian.db` | `kautian/DETAIL.md` | 18,031 Taiwanese headwords |
-| `concised/v1/` | `concised/concised.db` + `kautian/kautian.db` | `concised/CONCISED_DETAIL.md` | 4,603 臺華共同詞 headwords, Mandarin |
+| `concised/v2/` | `concised/concised.db` + `kautian/kautian.db` | `concised/CONCISED_DETAIL.md` | 7,415 entry-less headwords, Mandarin |
 
 Both are indexed by kautian `詞目id`, and no id is live in both — the Taiwanese
 and Mandarin datasets stay separate, so a client always knows which dictionary a

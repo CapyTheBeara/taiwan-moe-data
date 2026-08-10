@@ -6,17 +6,21 @@ and without SQLite. Built by `concised/build_concised_detail.py` from
 `concised/concised.db` and `kautian/kautian.db`.
 
 ```
-concised/v1/detail.bin   concatenated JSON records, no separators
-concised/v1/detail.idx   uint16 little-endian record lengths, ids 0…maxId
-concised/v1/meta.json    provenance and the integrity constants
+concised/v2/detail.bin   concatenated JSON records, no separators
+concised/v2/detail.idx   uint16 little-endian record lengths, ids 0…maxId
+concised/v2/meta.json    provenance and the integrity constants
 ```
+
+`concised/v2/` adds the 單字不成詞者 characters to `v1`'s 臺華共同詞 words; every
+`v1` record is byte-identical in `v2`. `v1` stays published — version paths are
+immutable — but nothing should point at it.
 
 **The format is `kautian/v1/`'s, byte for byte** — same 16-byte header, same
 prefix-sum index, same sentinel self-check, same `Range` addressing. Read
 `kautian/DETAIL.md` for all of it; only the magic differs (`CNDETAIL1` rather
 than `KTDETAIL1`), and both writers are the same `kautian/detail/container.py`.
 
-**Never republish a version path.** The next MOE refresh builds `concised/v2/`.
+**Never republish a version path.** The next MOE refresh builds `concised/v3/`.
 
 ## It is indexed by kautian 詞目id
 
@@ -28,21 +32,37 @@ implementation serves both containers; only the base URL changes.
 
 ## What gets a record
 
-Only headwords the source database labels `詞目類型 = '臺華共同詞'` — Taiwanese
-words that mean essentially what their Mandarin counterpart means. There are
-5,548, and **none of them has any Taigi detail at all**: no 義項, no 例句, no
-異用字, no 語音差異, no relations. They are precisely the headwords whose detail
-modal would otherwise be empty.
+Two of the five `詞目類型` values, both of them kinds the dictionary leaves with
+no 義項 of its own — precisely the headwords whose detail modal would otherwise
+be empty:
 
-They are matched to the Concised dictionary on 漢字 = 字詞名, after stripping the
-`【替】` substitute marker so the join key is the hanji the app displays. 4,603
-of the 5,548 match. The other 945 are genuine absences — 簡編本 is MOE's reduced
-dictionary for learners, and 山泉水, 水桶 and 小產 are simply not in it. They get
-no record, exactly as an unmatched id does.
+| 詞目類型 | headwords | matched | what it is |
+|---|---|---|---|
+| `臺華共同詞` | 5,548 | 4,603 | a word that means what its Mandarin counterpart means |
+| `單字不成詞者` | 3,104 | 2,812 | a character that does not stand alone as a word |
 
-No id is live in both containers, and that is checked rather than assumed: the
-two datasets stay separate, and a client never has to decide which dictionary a
-field came from.
+The two are **not** the same claim, and the difference matters to the client.
+For 臺華共同詞 the dictionary itself asserts the Mandarin equivalence, so the
+Concised entry is that word's definition. For 單字不成詞者 it asserts only that
+the character is bound; the Concised entry is what the *same character* means in
+Mandarin, which is a strong hint and not a translation. A client that renders
+both must say which one it is showing. `詞目類型` is not carried in the record —
+the app already has it, keyed by id, and duplicating it here would be a second
+copy to keep true.
+
+Headwords are matched to the Concised dictionary on 漢字 = 字詞名, after stripping
+the `【替】` substitute marker so the join key is the hanji the app displays. The
+1,237 misses are genuine absences — 簡編本 is MOE's reduced dictionary for
+learners, so 山泉水, 水桶 and 小產 are simply not in it, and neither are the
+characters Taigi writes phonetically (囡, 迌, 肨, 虼). They get no record, exactly
+as an unmatched id does.
+
+No id is live in both containers, and that is derived rather than assumed:
+`_covered_by_kautian` runs kautian's own record builder and drops every id it
+covers. That is not a formality — 109 單字不成詞者 carry an 異用字 or a 語音差異
+and nothing else, which is enough to earn a `kautian/v1` record, and 102 of them
+also match 簡編本. A client tries kautian first, so a record for those ids would
+be bytes nothing can reach.
 
 ## Record shape
 
@@ -101,7 +121,7 @@ offset.
 
 ```
 python3 concised/build_concised_detail.py --kautian-db kautian/kautian.db \
-    --concised-db concised/concised.db --out concised/v1/
+    --concised-db concised/concised.db --out concised/v2/
 python3 -m unittest discover -s concised/tests
 python3 -m unittest discover -s kautian/tests
 ```
