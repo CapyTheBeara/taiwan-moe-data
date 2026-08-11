@@ -1,26 +1,28 @@
 # Concised detail container contract
 
-`concised/v1/` is the Mandarin counterpart to `kautian/v1/`: what a browser
+`concised/v3/` is the Mandarin counterpart to `kautian/v1/`: what a browser
 reads to show what 《國語辭典簡編本》 holds about one headword, without a server
 and without SQLite. Built by `concised/build_concised_detail.py` from
 `concised/concised.db` and `kautian/kautian.db`.
 
 ```
-concised/v2/detail.bin   concatenated JSON records, no separators
-concised/v2/detail.idx   uint16 little-endian record lengths, ids 0…maxId
-concised/v2/meta.json    provenance and the integrity constants
+concised/v3/detail.bin   concatenated JSON records, no separators
+concised/v3/detail.idx   uint16 little-endian record lengths, ids 0…maxId
+concised/v3/meta.json    provenance and the integrity constants
 ```
 
-`concised/v2/` adds the 單字不成詞者 characters to `v1`'s 臺華共同詞 words; every
-`v1` record is byte-identical in `v2`. `v1` stays published — version paths are
-immutable — but nothing should point at it.
+`v2` added the 單字不成詞者 characters to `v1`'s 臺華共同詞 words. `v3` adds the
+101 of those characters that `v2` withheld because `kautian/v1` holds a
+senseless record for them — see "What gets a record". Every `v2` record is
+byte-identical in `v3`, and every `v1` record in `v2`. Both stay published —
+version paths are immutable — but nothing should point at them.
 
 **The format is `kautian/v1/`'s, byte for byte** — same 16-byte header, same
 prefix-sum index, same sentinel self-check, same `Range` addressing. Read
 `kautian/DETAIL.md` for all of it; only the magic differs (`CNDETAIL1` rather
 than `KTDETAIL1`), and both writers are the same `kautian/detail/container.py`.
 
-**Never republish a version path.** The next MOE refresh builds `concised/v3/`.
+**Never republish a version path.** The next MOE refresh builds `concised/v4/`.
 
 ## It is indexed by kautian 詞目id
 
@@ -39,7 +41,7 @@ be empty:
 | 詞目類型 | headwords | matched | what it is |
 |---|---|---|---|
 | `臺華共同詞` | 5,548 | 4,603 | a word that means what its Mandarin counterpart means |
-| `單字不成詞者` | 3,104 | 2,812 | a character that does not stand alone as a word |
+| `單字不成詞者` | 3,104 | 2,913 | a character that does not stand alone as a word |
 
 The two are **not** the same claim, and the difference matters to the client.
 For 臺華共同詞 the dictionary itself asserts the Mandarin equivalence, so the
@@ -52,17 +54,28 @@ copy to keep true.
 
 Headwords are matched to the Concised dictionary on 漢字 = 字詞名, after stripping
 the `【替】` substitute marker so the join key is the hanji the app displays. The
-1,237 misses are genuine absences — 簡編本 is MOE's reduced dictionary for
+1,136 misses are genuine absences — 簡編本 is MOE's reduced dictionary for
 learners, so 山泉水, 水桶 and 小產 are simply not in it, and neither are the
 characters Taigi writes phonetically (囡, 迌, 肨, 虼). They get no record, exactly
 as an unmatched id does.
 
-No id is live in both containers, and that is derived rather than assumed:
-`_covered_by_kautian` runs kautian's own record builder and drops every id it
-covers. That is not a formality — 109 單字不成詞者 carry an 異用字 or a 語音差異
-and nothing else, which is enough to earn a `kautian/v1` record, and 102 of them
-also match 簡編本. A client tries kautian first, so a record for those ids would
-be bytes nothing can reach.
+**No id whose `kautian/v1` record carries 義項 is live here**, and that is derived
+rather than assumed: `_covered_by_kautian` runs kautian's own record builder and
+drops every id whose record holds senses. Ids whose record holds *no* senses stay
+eligible, and that distinction is the difference between `v2` and `v3`.
+
+109 entry-less headwords carry an 異用字 or a 語音差異 and nothing else, which is
+enough to earn a `kautian/v1` record with no `senses` in it. `v2` dropped all 109
+to keep "no id is live in both containers" literally true. That cost more than it
+bought: 101 of them match 簡編本, and a client that stops at the kautian hit shows
+a hero card with nothing under it — 呵 `o` and 預 `ī` among them. `v3` gives those
+101 their Mandarin record.
+
+**So the client rule is not "try kautian, else concised" — it is "try kautian; a
+record with no `senses` is not a Taiwanese entry, so fall through to concised".**
+A client that returns on any kautian hit will still show those 101 as blank.
+The 8 that match nothing in 簡編本 have only their 異用字 or 語音差異 to show,
+which is what the kautian record already holds.
 
 ## Record shape
 
@@ -121,12 +134,12 @@ offset.
 
 ```
 python3 concised/build_concised_detail.py --kautian-db kautian/kautian.db \
-    --concised-db concised/concised.db --out concised/v2/
+    --concised-db concised/concised.db --out concised/v3/
 python3 -m unittest discover -s concised/tests
 python3 -m unittest discover -s kautian/tests
 ```
 
 `detail.bin` and `detail.idx` are byte-identical across rebuilds of the same two
-databases. Run the kautian suite too: both containers are written by the same
-module. `detail.bin` must never be tracked by Git LFS — `raw.githubusercontent.com`
+databases. Run the kautian suite too: all three containers are written by the
+same module. `detail.bin` must never be tracked by Git LFS — `raw.githubusercontent.com`
 serves an LFS pointer instead of the file.

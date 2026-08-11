@@ -159,14 +159,22 @@ For production, move to R2 with `Content-Type: application/octet-stream`,
 `ExposeHeaders: ["Content-Range"]`, and zone-level Brotli and Auto Minify
 confirmed not to apply to the path. Only the base URL changes.
 
-## The Mandarin sibling
+## The siblings
 
-`concised/v1/` is the same kind of container for 《國語辭典簡編本》, covering the
-臺華共同詞 headwords that have no Taiwanese detail here. It is written by this
-directory's `detail/container.py` — same header width, index, sentinel and
-`Range` addressing, over the same kautian id space — differing only in its
-magic, `CNDETAIL1`. Changing `container.py` changes both containers. See
-`concised/CONCISED_DETAIL.md`.
+Two more containers cover the headwords this one leaves empty. Both are written
+by this directory's `detail/container.py` — same header width, index, sentinel
+and `Range` addressing, over the same kautian id space — differing only in their
+magic. Changing `container.py` changes all three.
+
+`concised/v3/` (`CNDETAIL1`) holds 《國語辭典簡編本》 for the entry-less
+headwords, Mandarin. See `concised/CONCISED_DETAIL.md` — and note its client
+rule: **a record here that holds no `senses` is not a Taiwanese entry**, so a
+client must fall through to concised rather than stopping at the hit. 109
+headwords have a record here carrying only an 異用字 or a 語音差異.
+
+`kautian/rel/v1/` (`KTREL001`) inverts this container's six relation tables, so
+an entry-less headword can name the headwords that name it — the only content
+the dictionary holds for a 近反義詞不單列詞目者. See `kautian/RELATIONS.md`.
 
 ## Rebuilding
 
