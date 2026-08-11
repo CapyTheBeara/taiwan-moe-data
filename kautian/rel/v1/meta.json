@@ -1,0 +1,13 @@
+{
+  "buildDate": "2026-08-11",
+  "containerBytes": 228884,
+  "dbSha256": "b989a5dd05d0eff43a34d72338c5aba8b8f11d1858fd7bc4c0f8415fe323a8df",
+  "generatorCommit": "aade8a5af8bd174c623e7cae8526f279cd4f10be",
+  "headerBytes": 16,
+  "liveIds": 3619,
+  "maxId": 30284,
+  "sentinel": {
+    "head": "7b22616e746f6e796d4f66223a5b7b22e6bca2e5ad97223a22e5b89d222c22e8",
+    "id": 14758
+  }
+}

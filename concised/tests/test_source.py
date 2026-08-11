@@ -32,13 +32,21 @@ class TestRead(unittest.TestCase):
         )
         self.assertEqual(headwords, [(3522, "事"), (17743, "人品")])
 
-    def test_a_headword_kautian_already_covers_is_dropped(self):
+    def test_a_headword_kautian_answers_with_義項_is_dropped(self):
+        headwords, _, _ = self.read(
+            [headword(3522, "事", "單字不成詞者"), headword(17743, "人品")],
+            [],
+            {"義項": [(3522, 9, "名", "代誌。")]},
+        )
+        self.assertEqual(headwords, [(17743, "人品")])
+
+    def test_a_headword_whose_kautian_record_holds_no_義項_is_kept(self):
         headwords, _, _ = self.read(
             [headword(3522, "事", "單字不成詞者"), headword(17743, "人品")],
             [],
             {"異用字": [(3522, "事", "代")]},
         )
-        self.assertEqual(headwords, [(17743, "人品")])
+        self.assertEqual(headwords, [(3522, "事"), (17743, "人品")])
 
     def test_the_join_key_drops_the_替_marker(self):
         headwords, _, _ = self.read([headword(1, "乜【替】")], [])

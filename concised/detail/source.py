@@ -38,16 +38,19 @@ def _entries(connection):
 
 
 def _covered_by_kautian(kautian_db):
-    """The ids kautian/v1 gives a record, derived by running its own builder.
+    """The ids kautian/v1 answers with 義項 of their own, by running its builder.
 
     A 詞目類型 says the headword has no 義項; it does not promise the headword has
-    no record at all. 102 單字不成詞者 carry an 異用字 or a 語音差異 and nothing
-    else, which is enough for kautian/v1 to hold them. Those ids are dropped here
-    so "no id is live in both containers" stays a fact rather than a hope — the
-    client tries kautian first, so a record here would be unreachable bytes.
+    no record at all. 109 entry-less headwords carry an 異用字 or a 語音差異 and
+    nothing else, which earns them a kautian/v1 record that holds no `senses`.
+    A client reading that record finds no Taigi entry in it and falls through to
+    this container, so those ids stay eligible here — 101 of them the Concised
+    dictionary can speak to, and dropping them left the client with a hero card
+    and nothing under it. Only a record carrying 義項 shadows this container.
     """
     tables, sense_owner, categories, _ = kautian_source.read(kautian_db)
-    return set(kautian_records.build(tables, sense_owner, categories))
+    built = kautian_records.build(tables, sense_owner, categories)
+    return {word_id for word_id, record in built.items() if record.get("senses")}
 
 
 def read(kautian_db, concised_db):
