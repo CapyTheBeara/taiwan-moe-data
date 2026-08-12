@@ -6,6 +6,17 @@ SENTINEL_HEAD_BYTES = 32
 HEADER_BYTES = 16
 
 
+def read_lengths(idx_path):
+    """Read a detail.idx file back into its list of uint16 record lengths.
+
+    The inverse of the index half of `write`: `length[id] > 0` is the
+    has-record check every reader of this format — JS or Python — makes.
+    """
+    with open(idx_path, "rb") as handle:
+        raw = handle.read()
+    return list(struct.unpack(f"<{len(raw) // 2}H", raw))
+
+
 def magic(name):
     padded = name.encode("ascii").ljust(HEADER_BYTES, b"\x00")
     if len(padded) != HEADER_BYTES:

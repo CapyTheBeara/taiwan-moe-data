@@ -1,0 +1,20 @@
+{
+  "buildDate": "2026-08-11",
+  "concisedIdxSha256": "637cc5b52a2c106f122da1014a6fccb0409423e43470018dcf258706808138fb",
+  "generatorCommit": "b707c04bac2a8062333fca859b9de83386e66f90",
+  "kautianDbSha256": "b989a5dd05d0eff43a34d72338c5aba8b8f11d1858fd7bc4c0f8415fe323a8df",
+  "kinds": [
+    "full",
+    "bound",
+    "named",
+    "none"
+  ],
+  "maxId": 30284,
+  "relationsIdxSha256": "8000074a910658baf98a3efd06d77d5498ea9c802e5b159028fc873a35bb74dd",
+  "tally": {
+    "bound": 2913,
+    "full": 23218,
+    "named": 3078,
+    "none": 1076
+  }
+}

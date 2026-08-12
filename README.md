@@ -36,13 +36,16 @@ They share a format and a client; each has its own contract document.
 | `kautian/v1/` | `kautian/kautian.db` | `kautian/DETAIL.md` | 18,031 Taiwanese headwords |
 | `concised/v3/` | `concised/concised.db` + `kautian/kautian.db` | `concised/CONCISED_DETAIL.md` | 7,516 entry-less headwords, Mandarin |
 | `kautian/rel/v1/` | `kautian/kautian.db` | `kautian/RELATIONS.md` | 3,619 entry-less headwords, inbound relations |
+| `kautian/kind/v1/` | `kautian/kautian.db` + `concised/v3/detail.idx` + `kautian/rel/v1/detail.idx` | `kautian/KIND.md` | 30,285 detail-kind bytes, one per id 0…maxId |
 
-All three are indexed by kautian `詞目id`. The Taiwanese and Mandarin
+All four are indexed by kautian `詞目id`. The Taiwanese and Mandarin
 *definitions* stay in separate containers, so a client always knows which
 dictionary a definition came from: no id whose `kautian/v1` record carries 義項
 is live in `concised/v3/`. `kautian/rel/v1/` is a third question rather than a
 fallback — which other headwords name this one — and does overlap the other two
-by design.
+by design. `kautian/kind/v1/` is a precomputed cache over the other three: for
+each id, which of `full`/`bound`/`named`/`none` a client should render without
+booting `concised/v3/` and `kautian/rel/v1/` first.
 
 Superseded version paths stay published because they are immutable: `concised/v1/`
 and `concised/v2/` are still here, and nothing should point at them.
