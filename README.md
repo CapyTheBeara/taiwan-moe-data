@@ -50,6 +50,24 @@ booting `concised/v3/` and `kautian/rel/v1/` first.
 Superseded version paths stay published because they are immutable: `concised/v1/`
 and `concised/v2/` are still here, and nothing should point at them.
 
+## Archive format
+
+`kautian/opt/` packs `kautian/kautian.db` into a single 1.33 MB file that
+unpacks back to the database **byte for byte** — 7.74x the .db, and 2.28x
+better than compressing the .db directly. It is a lossless re-encoding, not a
+projection: it removes the denormalised join columns, the composed audio
+filenames and the romanisation that the 漢字 already implies, then puts them
+back on the way out. Contract: `kautian/OPTIMIZED.md`.
+
+Unlike the containers above it is not for browsers and serves no range
+requests; it is the whole database as one offline file. The artifact is not
+committed — it is fully derivable from `kautian.db`, which is already here —
+so build it when you need it:
+
+```bash
+python3 kautian/build_optimized.py --db kautian/kautian.db --verify
+```
+
 ## License
 
 All dictionary text and audio in this repository is published by the
