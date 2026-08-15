@@ -105,6 +105,19 @@ const RULES = {
   },
 };
 
+/**
+ * Expand an enumerated column.
+ *
+ * Every row of a given value gets the *same* string, not a copy of it, which is
+ * the point: 詞目.分類 becomes 29,591 pointers into a table of 106 strings.
+ */
+const decodeEnum = (spec) => {
+  const { enum: values, at } = spec;
+  const out = new Array(at.length);
+  for (let index = 0; index < at.length; index += 1) out[index] = values[at[index]];
+  return out;
+};
+
 const decodeDerived = (spec, context, rows) => {
   const values = RULES[spec.rule](context, rows, ...spec.args);
   for (let index = 0; index < spec.at.length; index += 1) values[spec.at[index]] = spec.is[index];
@@ -147,33 +160,72 @@ const decodeTailo = (spec, model, hanjiValues) => {
   return out;
 };
 
+/** Tables the derived rules join against, so they are decoded even if unwanted. */
+const CONTEXT_TABLES = ["詞目", "義項"];
+
 /**
- * Decode a KTWEB1 document to `{ tableName: [rowObject, ...] }`.
+ * Decode a KTWEB1 document to `{ tableName: { column: [value, ...] } }`.
  *
- * Every table is decoded: the derived columns are joins against 詞目 and 義項,
- * so there is no useful way to decode one table alone.
+ * The columnar form is the cheap one to hold: one array per column instead of
+ * one object per row. Prefer it for anything long-lived, and use `rows()` to
+ * shape the handful of records a view actually renders.
+ *
+ * `only` limits the work to the tables named, plus the two the derived rules
+ * join against — a rule reads 詞目 and 義項, so those are decoded whether or not
+ * they were asked for, and dropped from the result if they were not.
+ *
+ * `context` supplies tables decoded earlier, which is what lets a document be
+ * loaded and released a table at a time: hold 詞目 and 義項, and every other
+ * table can be decoded from a document containing only itself. Peak memory then
+ * tracks the largest single table rather than the whole dictionary.
  */
-export function decode(document) {
+export function decodeColumns(document, { only, context: prior } = {}) {
   if (document?.format !== FORMAT) throw new Error(`not a ${FORMAT} document`);
-  const context = {};
-  const tables = {};
+  const context = { ...prior };
+  const needed = CONTEXT_TABLES.filter((name) => !(name in context));
+  const wanted = only && new Set([...only, ...needed]);
   for (const entry of document.tables) {
+    if (wanted && !wanted.has(entry.name)) continue;
     const columns = {};
     for (const column of entry.columns) {
       const spec = entry.values[column];
       if (Array.isArray(spec)) columns[column] = spec;
+      else if (spec.enum) columns[column] = decodeEnum(spec);
       else if (spec.rule) columns[column] = decodeDerived(spec, context, columns);
       else columns[column] = decodeTailo(spec, document.model, columns[spec.tailo]);
     }
     context[entry.name] = columns;
-    const rows = new Array(entry.rows);
-    for (let index = 0; index < entry.rows; index += 1) {
-      const row = {};
-      for (const column of entry.columns) row[column] = columns[column][index];
-      rows[index] = row;
-    }
-    tables[entry.name] = rows;
   }
+  if (only) {
+    for (const name of needed) if (!only.includes(name)) delete context[name];
+  }
+  return context;
+}
+
+/**
+ * Materialise row objects from one decoded table.
+ *
+ * `rows(tables.詞目)` builds every row; `rows(tables.詞目, 0, 20)` builds a page.
+ * Row objects cost roughly a third again of what the columns cost, so building
+ * them for the whole dictionary is a choice, not a requirement.
+ */
+export function rows(columns, start = 0, end) {
+  const names = Object.keys(columns);
+  const last = end ?? columns[names[0]].length;
+  const out = new Array(Math.max(0, last - start));
+  for (let index = start; index < last; index += 1) {
+    const row = {};
+    for (const name of names) row[name] = columns[name][index];
+    out[index - start] = row;
+  }
+  return out;
+}
+
+/** Decode straight to `{ tableName: [rowObject, ...] }`. Convenience over economy. */
+export function decode(document, options) {
+  const columns = decodeColumns(document, options);
+  const tables = {};
+  for (const name of Object.keys(columns)) tables[name] = rows(columns[name]);
   return tables;
 }
 

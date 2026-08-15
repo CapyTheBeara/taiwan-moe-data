@@ -48,6 +48,10 @@ from kautian.opt.tailo import ESCAPE_RANK, aligns, build_model, han_characters, 
 FORMAT = "KTWEB1"
 UNIT = "\x1f"
 
+# A column is enumerated when it is long enough and repetitive enough to pay for it.
+ENUM_MIN_ROWS = 64
+ENUM_MAX_RATIO = 0.2
+
 NULL, ALIGNED, LITERAL = 2, 1, 0
 
 
@@ -102,6 +106,31 @@ def _tailo_column(hanji_column, hanji_values, values, model):
     }
 
 
+def _enum_column(values):
+    """Store one copy of each distinct value, and an index per row.
+
+    Worth doing twice over. On the wire the indices compress to almost nothing,
+    and in the browser `JSON.parse` allocates one string per distinct value
+    instead of one per row — 詞目.分類 alone is 29,591 rows over 106 values. The
+    null rides in the table as an entry of its own, so no sentinel is needed.
+    """
+    table = []
+    lookup = {}
+    indices = []
+    for value in values:
+        key = (value is None, value)
+        if key not in lookup:
+            lookup[key] = len(table)
+            table.append(value)
+        indices.append(lookup[key])
+    return {"enum": table, "at": indices}
+
+
+def _is_enumerable(values):
+    """Enumerate a column when the repeats pay for the indirection."""
+    return len(values) >= ENUM_MIN_ROWS and len(set(values)) <= len(values) * ENUM_MAX_RATIO
+
+
 def to_document(schema, data, _header=None):
     """Build the browser document from a dataset.
 
@@ -125,6 +154,8 @@ def to_document(schema, data, _header=None):
                 values[column] = _derived_column(spec[1], spec[2], context, rows, rows[column])
             elif spec[0] == tables.TAILO:
                 values[column] = _tailo_column(spec[1], rows[spec[1]], rows[column], model)
+            elif _is_enumerable(rows[column]):
+                values[column] = _enum_column(rows[column])
             else:
                 values[column] = rows[column]
         document["tables"].append(
