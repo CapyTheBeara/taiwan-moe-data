@@ -13,7 +13,7 @@ dependency, and no SQLite.
 | \+ tailo with the model derived, not sent |     1,429,192 B  | \+ an exact frequency ordering |
 | `kautian.ktz`                            |     1,325,703 B  | a full port, and LZMA in WASM |
 
-All brotli `-q 11 --lgwin 24`, over the same 19 tables and 746,986 values.
+All brotli `-q 11 --lgwin 24`, over the same 19 tables and 746,857 values.
 
 Build it — the dataset can come from the .db, from a `KTJSON1` document, or from
 the container, and the output is the same either way:

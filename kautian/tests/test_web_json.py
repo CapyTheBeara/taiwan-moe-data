@@ -139,6 +139,28 @@ class TestWebDocumentAgainstTheRealDatabase(unittest.TestCase):
         for table in expected:
             self.assertEqual(decoded[table], expected[table], f"{table} does not match")
 
+    def test_every_value_keeps_its_storage_class(self):
+        """`==` is not enough: it holds 1 equal to 1.0, and SQLite does not.
+
+        A JSON number that came back as a float, or an integer that came back as
+        a string, is a changed value however it compares — so the storage class
+        is asserted alongside it, on all 746,857.
+        """
+        schema, data, header = container.read_database(REAL_DB)
+        document = webjson.to_document(schema, data, header)
+        with tempfile.TemporaryDirectory() as workspace:
+            decoded = decode_with_node(document, Path(workspace))
+        expected = expected_rows(schema, data)
+        compared = 0
+        for table in expected:
+            for index, (want, got) in enumerate(zip(expected[table], decoded[table])):
+                for column, value in want.items():
+                    self.assertIs(
+                        type(value), type(got[column]), f"{table}[{index}].{column} changed storage class"
+                    )
+                    compared += 1
+        self.assertEqual(compared, 746857)
+
 
 if __name__ == "__main__":
     unittest.main()
