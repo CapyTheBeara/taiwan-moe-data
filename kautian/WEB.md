@@ -52,9 +52,26 @@ Three things move this number, in the order worth trying:
    are most of the corpus; the other sixteen tables together are 6 MB.
 3. **Never hold the whole document.** Peak is dominated by the parsed JSON, not
    by the result — the document is roughly as large as what it decodes to, and
-   both are alive at once. Passing `context` lets each table be decoded from a
-   document containing only itself, so peak tracks the largest single table.
-   Split the file per table at build time and peak halves.
+   both are alive at once. `--split-out` writes `index.json` plus one file per
+   table; fetch them in index order, passing `context` forward, and peak tracks
+   the largest single table instead of the dictionary. It costs 55 KB
+   compressed, because each part is compressed against its own dictionary.
+
+```js
+const head = await (await fetch("/kautian/index.json")).json();
+let context = {};
+for (const table of head.tables) {                 // index order is load-bearing
+  if (!["詞目", "義項", "例句"].includes(table.name)) continue;
+  const entry = await (await fetch(`/kautian/${table.file}`)).json();
+  context = decodeColumns({ format: head.format, model: head.model, tables: [entry] },
+                          { only: [table.name], context });
+}
+rows(context["詞目"], 0, 20);                       // a page of row objects
+```
+
+   Measured over the real split files: 詞目 + 義項 + 例句 is 22.2 MB steady at a
+   28.8 MB peak in 246 ms, against 55.7 MB peak for the same three tables out of
+   the single document.
 
 Two smaller things: fetch with `response.json()` rather than parsing a string
 you already materialised — the browser parses from the network stream and skips

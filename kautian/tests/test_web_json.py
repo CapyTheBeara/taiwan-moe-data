@@ -19,6 +19,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from kautian.build_web_json import write_split
 from kautian.opt import container, webjson
 from kautian.tests.test_optimized import write_db
 
@@ -112,6 +113,24 @@ class TestWebDocument(unittest.TestCase):
         document = webjson.to_document(schema, data, header)
         decoded = decode_with_node(document, workspace, SPLIT_DRIVER)
         self.assertEqual(decoded, expected_rows(schema, data))
+
+    def test_the_split_layout_reassembles_to_the_same_document(self):
+        """index.json plus the parts must be the single document, table order included."""
+        workspace = Path(tempfile.mkdtemp())
+        schema, data, header = container.read_database(write_db(workspace / "source.db", self.ROWS))
+        document = webjson.to_document(schema, data, header)
+        write_split(document, workspace / "split")
+        index = json.loads((workspace / "split" / "index.json").read_text(encoding="utf-8"))
+        rebuilt = {
+            "format": index["format"],
+            "model": index["model"],
+            "tables": [
+                json.loads((workspace / "split" / entry["file"]).read_text(encoding="utf-8"))
+                for entry in index["tables"]
+            ],
+        }
+        self.assertEqual(rebuilt, document)
+        self.assertEqual([entry["name"] for entry in index["tables"]][:2], ["詞目", "義項"])
 
     def test_a_capitalised_reading_survives(self):
         expected, decoded = self.roundtrip(
