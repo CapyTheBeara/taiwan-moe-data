@@ -8,7 +8,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from kautian.opt import codec, container, tables, tailo
+from kautian.opt import codec, container, jsonio, tables, tailo
 
 REAL_DB = REPO_ROOT / "kautian" / "kautian.db"
 
@@ -177,6 +177,78 @@ class TestRoundtrip(unittest.TestCase):
         self.assertEqual(sha256(rebuilt), sha256(source))
 
 
+class TestJsonDocument(unittest.TestCase):
+    """The dataset must survive a trip out to JSON and back with nothing changed.
+
+    JSON is a peer of the .db, not a projection of it: the container built from a
+    document has to be the same bytes as the container the document came from,
+    and the database rebuilt through it has to keep its SHA-256.
+    """
+
+    ROWS = {
+        "詞目": [
+            (1, "主詞目", "一", "tsi̍t", "數詞、量詞", "1(1)"),
+            (2, "主詞目", "一蕊花", "tsi̍t-luí-hue", None, "2(1)"),
+            (3, "臺華共同詞", "清楚", None, "", None),
+        ],
+        "義項": [(1, 1, "數詞", "數目。"), (2, 2, "名詞", "一朵花。")],
+        "例句": [(1, 1, 1, "一蕊花", "tsi̍t-luí-hue", "一朵花", "1-1-1")],
+        "異用字": [(1, "蜀", "壹")],
+    }
+
+    def document(self, rows):
+        workspace = Path(tempfile.mkdtemp())
+        source = write_db(workspace / "source.db", rows)
+        blob = container.encode(source)
+        path = workspace / "dataset.json"
+        jsonio.dump(jsonio.to_document(*container.decode(blob)), path)
+        return workspace, source, blob, jsonio.load(path)
+
+    def test_a_document_repacks_to_the_same_container_bytes(self):
+        _, _, blob, document = self.document(self.ROWS)
+        self.assertEqual(container.encode_dataset(*jsonio.from_document(document)), blob)
+
+    def test_a_database_rebuilt_through_json_is_byte_identical(self):
+        workspace, source, _, document = self.document(self.ROWS)
+        rebuilt = workspace / "rebuilt.db"
+        repacked = container.encode_dataset(*jsonio.from_document(document))
+        container.rebuild(*container.decode(repacked), rebuilt)
+        self.assertEqual(sha256(rebuilt), sha256(source))
+
+    def test_rows_are_objects_keyed_in_column_order(self):
+        _, _, _, document = self.document(self.ROWS)
+        self.assertEqual(
+            list(document["tables"]["異用字"][0].items()), [("詞目id", 1), ("漢字", "蜀"), ("異用字", "壹")]
+        )
+
+    def test_a_null_is_carried_as_json_null_not_a_missing_key(self):
+        _, _, _, document = self.document(self.ROWS)
+        third = document["tables"]["詞目"][2]
+        self.assertIn("羅馬字", third)
+        self.assertIsNone(third["羅馬字"])
+        self.assertEqual(third["分類"], "")
+
+    def test_an_empty_table_is_an_empty_array(self):
+        _, _, _, document = self.document(self.ROWS)
+        self.assertEqual(document["tables"]["姓"], [])
+
+    def test_the_sqlite_half_carries_the_schema_and_header(self):
+        _, _, _, document = self.document(self.ROWS)
+        self.assertEqual(document["sqlite"]["header"]["pageSize"], 4096)
+        names = [entry["name"] for entry in document["sqlite"]["tables"]]
+        self.assertEqual(names, list(FULL_SCHEMA))
+
+    def test_a_value_sqlite_would_store_differently_is_rejected(self):
+        _, _, _, document = self.document(self.ROWS)
+        document["tables"]["詞目"][0]["詞目id"] = 1.0
+        with self.assertRaises(ValueError):
+            jsonio.from_document(document)
+
+    def test_a_foreign_document_is_rejected(self):
+        with self.assertRaises(ValueError):
+            jsonio.from_document({"tables": {}})
+
+
 @unittest.skipUnless(REAL_DB.exists(), "kautian.db is not present in this checkout")
 class TestRealDatabase(unittest.TestCase):
     def test_kautian_db_rebuilds_byte_for_byte(self):
@@ -189,6 +261,17 @@ class TestRealDatabase(unittest.TestCase):
 
     def test_the_container_is_deterministic(self):
         self.assertEqual(container.encode(REAL_DB), container.encode(REAL_DB))
+
+    def test_kautian_db_survives_a_json_roundtrip(self):
+        blob = container.encode(REAL_DB)
+        with tempfile.TemporaryDirectory() as workspace:
+            path = Path(workspace) / "kautian.json"
+            jsonio.dump(jsonio.to_document(*container.decode(blob)), path)
+            repacked = container.encode_dataset(*jsonio.from_document(jsonio.load(path)))
+            self.assertEqual(repacked, blob)
+            rebuilt = Path(workspace) / "rebuilt.db"
+            container.rebuild(*container.decode(repacked), rebuilt)
+            self.assertEqual(sha256(rebuilt), sha256(REAL_DB))
 
 
 if __name__ == "__main__":
