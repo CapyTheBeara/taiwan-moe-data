@@ -203,6 +203,12 @@ HTTP, without SQLite. This is the opposite shape — the whole database, offline
 as a file you unpack back into `kautian.db`. Nothing here reads those containers
 and nothing there reads this.
 
+`kautian/web/` is the near relative: the same modelling, aimed at a browser. It
+drops LZMA for brotli and ships the romanisation model instead of deriving it,
+which costs 136 KB and buys a decoder that is a hundred lines of dependency-free
+JavaScript. It cannot rebuild the .db — the schema statements and header fields
+are not in it. Contract: `kautian/WEB.md`.
+
 ## Tests
 
 ```bash

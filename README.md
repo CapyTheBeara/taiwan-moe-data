@@ -57,7 +57,17 @@ unpacks back to the database **byte for byte** — 7.74x the .db, and 2.28x
 better than compressing the .db directly. It is a lossless re-encoding, not a
 projection: it removes the denormalised join columns, the composed audio
 filenames and the romanisation that the 漢字 already implies, then puts them
-back on the way out. Contract: `kautian/OPTIMIZED.md`.
+back on the way out. It reads and writes the dataset as JSON as readily as as a
+database. Contract: `kautian/OPTIMIZED.md`.
+
+## Whole-dictionary container for browsers
+
+`kautian/web/` is the same idea aimed at a browser instead of a filesystem: a
+1.46 MB brotli file holding every row, decoded to plain JavaScript objects by
+`kautian/web/kautian.mjs` — no WASM, no dependencies, ~250 ms for all 153,191
+rows. It gives up byte-identity with the .db to stay decodable without LZMA.
+Use it when an app wants the entire dictionary resident; use the range-fetchable
+containers above for per-headword lookup. Contract: `kautian/WEB.md`.
 
 Unlike the containers above it is not for browsers and serves no range
 requests; it is the whole database as one offline file. The artifact is not
