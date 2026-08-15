@@ -5,12 +5,14 @@ subset: every table, column, row, NULL and storage class survives, and the
 decoder rebuilds a SQLite file that is **byte-identical** to the original —
 same 2,506 pages, same SHA-256.
 
-|                          |                |
-| ------------------------ | -------------: |
-| `kautian.db`             |  10,264,576 B  |
-| `gzip -9` of the .db     |   4,463,822 B  |
-| `brotli -11` of the .db  |   3,021,071 B  |
-| **`kautian.ktz`**        | **1,325,703 B** |
+|                            |                 |
+| -------------------------- | --------------: |
+| `kautian.db`               |   10,264,576 B  |
+| `gzip -9` of the .db       |    4,463,822 B  |
+| `brotli -11` of the .db    |    3,021,071 B  |
+| `kautian.json`             |   19,996,375 B  |
+| `gzip -9` of the .json     |    3,795,663 B  |
+| **`kautian.ktz`**          | **1,325,703 B** |
 
 7.74× the database, 2.28× better than compressing the database directly.
 
@@ -23,6 +25,45 @@ python3 kautian/build_optimized.py --db kautian/kautian.db --out kautian/opt/v1/
 
 `--verify` decodes, rebuilds, and compares SHA-256 against the input. It is the
 whole contract as an executable check; run it after any change to this format.
+
+## SQLite is one of two ends, not the format
+
+The compressor never sees a database. `container.encode_dataset` takes a
+dataset — table order and creation SQL, each column's declared type, the column
+values, and the SQLite header fields the engine does not recompute — and that
+triple is all it needs. A .db is one way to spell it; a JSON document is
+another, and both spell the same 1,325,703 bytes.
+
+```bash
+# unpack the container to JSON, no database in the loop
+python3 kautian/build_optimized.py --ktz kautian/opt/v1/kautian.ktz --json-out kautian.json
+
+# or go straight from the database to JSON
+python3 kautian/build_optimized.py --db kautian/kautian.db --json-out kautian.json
+
+# and back: JSON in, container out, still byte-identical to the original .db
+python3 kautian/build_optimized.py --json kautian.json --out kautian.ktz --verify kautian/kautian.db
+```
+
+The document (`kautian/opt/jsonio.py`, `"KTJSON1"`) has two halves:
+
+- **`tables`** — the dictionary. One array of row objects per table, keys in
+  column order, SQL NULL as JSON null. Row objects rather than parallel arrays,
+  because the point of the JSON end is to be read by something that is not this
+  repository. The repeated keys are why the .json is twice the .db; none of it
+  reaches the wire.
+- **`sqlite`** — a few kilobytes of `sqlite_master` statements in creation
+  order, declared types, and header fields. This is the half that buys
+  byte-identity. Drop it and every value is still there, but the .db can no
+  longer be reproduced exactly.
+
+Values must be text, integer or null — the storage classes this database
+actually uses. A document that writes `1.0` where the database holds `1` is
+rejected at read time rather than at the closing SHA-256, since SQLite would
+store it as a REAL and the file would no longer match.
+
+`.db -> .ktz -> .json`, `.json -> .ktz -> .db` and `.ktz -> .json -> .ktz` are
+all pinned by tests, on both the synthetic database and the real one.
 
 ## Why it compresses
 
@@ -162,6 +203,12 @@ HTTP, without SQLite. This is the opposite shape — the whole database, offline
 as a file you unpack back into `kautian.db`. Nothing here reads those containers
 and nothing there reads this.
 
+`kautian/web/` is the near relative: the same modelling, aimed at a browser. It
+drops LZMA for brotli and ships the romanisation model instead of deriving it,
+which costs 136 KB and buys a decoder that is a hundred lines of dependency-free
+JavaScript. It cannot rebuild the .db — the schema statements and header fields
+are not in it. Contract: `kautian/WEB.md`.
+
 ## Tests
 
 ```bash
@@ -170,6 +217,7 @@ python3 -m unittest discover -s kautian/tests
 
 `test_optimized.py` covers the codec primitives, the Tâi-lô tokenizer's
 round-trip on every orthography in the corpus, synthetic-database byte-identity,
-and — when `kautian.db` is present — the real database and encoder determinism.
+the JSON document's round trip, and — when `kautian.db` is present — the real
+database and encoder determinism.
 The rule-violation tests are the important ones: they assert that a row which
 *breaks* a derived rule still survives the round trip.

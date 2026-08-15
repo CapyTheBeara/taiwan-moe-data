@@ -52,8 +52,13 @@ def _read_tables(connection):
         schema.append({"name": name, "sql": sql, "columns": columns})
         rows = connection.execute(f'select * from "{name}"').fetchall()
         data[name] = {column: [row[index] for row in rows] for index, (column, _) in enumerate(columns)}
-        data[name]["__rows__"] = len(rows)
     return schema, data
+
+
+def row_count(schema_entry, rows):
+    """A table's row count is the length of any of its columns."""
+    columns = schema_entry["columns"]
+    return len(rows[columns[0][0]]) if columns else 0
 
 
 def _encode_tailo(hanji_values, readings, model):
@@ -194,17 +199,40 @@ def _decode_column(table, column, plan, sections, at, count, nullable, declared_
     return [None if is_null else next(iterator) for is_null in nulls], at
 
 
-def encode(db_path):
-    """Read a kautian.db and return the compressed container bytes."""
+def read_database(db_path):
+    """Return the dataset — (schema, columns, header) — held by a SQLite file."""
     connection = sqlite3.connect(db_path)
     connection.text_factory = str
     schema, data = _read_tables(connection)
     connection.close()
+    return schema, data, _read_header(db_path)
 
+
+def dataset(manifest, context):
+    """Return the dataset held by a decoded container, in `encode_dataset` shape."""
+    schema = [
+        {
+            "name": entry["name"],
+            "sql": entry["sql"],
+            "columns": [(column["name"], column["type"]) for column in entry["columns"]],
+        }
+        for entry in manifest["tables"]
+    ]
+    return schema, context, manifest["header"]
+
+
+def encode_dataset(schema, data, header):
+    """Compress a dataset into container bytes.
+
+    The dataset is the whole input: table order and creation SQL, each column's
+    declared type, the column values, and the SQLite header fields the engine
+    does not recompute. Where it came from — a .db, a JSON document, another
+    container — makes no difference to the bytes produced.
+    """
     source_table, hanji_column, reading_column = tables.MODEL_SOURCE
     model = build_model(zip(data[source_table][hanji_column], data[source_table][reading_column]))
 
-    manifest = {"version": 1, "header": _read_header(db_path), "tables": []}
+    manifest = {"version": 1, "header": header, "tables": []}
     sections = []
     context = {}
     for entry in schema:
@@ -218,11 +246,16 @@ def encode(db_path):
             columns.append({"name": column, "type": declared, "nullable": nullable, **extra})
             sections += column_sections
         manifest["tables"].append(
-            {"name": name, "sql": entry["sql"], "rows": rows["__rows__"], "columns": columns}
+            {"name": name, "sql": entry["sql"], "rows": row_count(entry, rows), "columns": columns}
         )
         context[name] = rows
     body = codec.pack_sections([json.dumps(manifest, ensure_ascii=False).encode("utf-8")] + sections)
     return MAGIC + lzma.compress(body, preset=9 | lzma.PRESET_EXTREME)
+
+
+def encode(db_path):
+    """Read a kautian.db and return the compressed container bytes."""
+    return encode_dataset(*read_database(db_path))
 
 
 def decode(blob):
