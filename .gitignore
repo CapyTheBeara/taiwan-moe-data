@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+*.web.json
+*.web.json.br

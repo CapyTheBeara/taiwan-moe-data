@@ -106,7 +106,7 @@ def _tailo_column(hanji_column, hanji_values, values, model):
     }
 
 
-def _enum_column(values):
+def enum_column(values):
     """Store one copy of each distinct value, and an index per row.
 
     Worth doing twice over. On the wire the indices compress to almost nothing,
@@ -126,7 +126,7 @@ def _enum_column(values):
     return {"enum": table, "at": indices}
 
 
-def _is_enumerable(values):
+def is_enumerable(values):
     """Enumerate a column when the repeats pay for the indirection."""
     return len(values) >= ENUM_MIN_ROWS and len(set(values)) <= len(values) * ENUM_MAX_RATIO
 
@@ -154,8 +154,8 @@ def to_document(schema, data, _header=None):
                 values[column] = _derived_column(spec[1], spec[2], context, rows, rows[column])
             elif spec[0] == tables.TAILO:
                 values[column] = _tailo_column(spec[1], rows[spec[1]], rows[column], model)
-            elif _is_enumerable(rows[column]):
-                values[column] = _enum_column(rows[column])
+            elif is_enumerable(rows[column]):
+                values[column] = enum_column(rows[column])
             else:
                 values[column] = rows[column]
         document["tables"].append(
