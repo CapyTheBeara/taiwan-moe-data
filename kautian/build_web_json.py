@@ -28,7 +28,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from kautian import meta
 from kautian.opt import container, jsonio, webjson
+
+
+def source_files(arguments):
+    """The dataset file the document was projected from, for the `meta` block."""
+    for name in ("db", "json", "ktz"):
+        path = getattr(arguments, name)
+        if path:
+            return {path.name: path}
+    return {}
 
 
 def load_dataset(arguments):
@@ -62,10 +72,13 @@ def write_split(document, directory):
 
     for entry in document["tables"]:
         emit(f"{entry['name']}.json", entry)
+    index = {"format": document["format"]}
+    if "meta" in document:
+        index["meta"] = document["meta"]
     emit(
         "index.json",
         {
-            "format": document["format"],
+            **index,
             "model": document["model"],
             "tables": [
                 {"name": entry["name"], "rows": entry["rows"], "file": f"{entry['name']}.json"}
@@ -94,6 +107,7 @@ def main(argv=None):
         parser.error("nothing to write: pass --out, --split-out, or both")
 
     document = webjson.to_document(*load_dataset(arguments))
+    document["meta"] = meta.build(source_files(arguments))
 
     if arguments.split_out:
         for path, size in write_split(document, arguments.split_out):

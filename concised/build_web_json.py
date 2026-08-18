@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from concised.detail import records, source
+from kautian import meta
 from concised.web import webjson
 
 
@@ -34,7 +35,9 @@ def build(kautian_db, concised_db):
     """The document, and the records it was built from for the caller to count."""
     headwords, entries, _max_id = source.read(kautian_db, concised_db)
     built = records.build(headwords, entries)
-    return webjson.to_document(built), built
+    document = webjson.to_document(built)
+    document["meta"] = meta.build({kautian_db.name: kautian_db, concised_db.name: concised_db})
+    return document, built
 
 
 def main(argv=None):

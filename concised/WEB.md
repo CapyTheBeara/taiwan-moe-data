@@ -47,6 +47,30 @@ const { 簡編 } = decode(doc);
 簡編[0].釋義;
 ```
 
+## `meta` — the provenance block a cache keys on
+
+A range-request client reads `meta.json` beside the container before it fetches
+any bytes. A browser document has no sidecar: it is fetched whole and cached
+whole, and the client that already holds a copy needs to answer "is this still
+current?" without a second round trip. So the same facts ride *inside* the
+document, under `meta`:
+
+```json
+{"version": "3f9c1a2b7d04",
+ "generatorCommit": "080e831be5f2e4598e75f21efb8c0f4213ae12d1",
+ "buildDate": "2026-08-18",
+ "sources": {"kautian.db": "b989a5dd…"}}
+```
+
+`version` is the cache key, and it covers both halves of what produced the
+document — every source digest **and** the generator commit. Rebuilding from
+the same databases at the same commit reproduces it, so a redeploy that changed
+neither does not evict anyone's cached copy; changing either evicts every copy.
+
+`kautian/web/kautian.mjs` reads only `format`, `model` and `tables`, so the
+block is invisible to decoding — pinned by `kautian/tests/test_meta.py`, along
+with `version`'s stability. `--split-out` copies it into `index.json`.
+
 ## One table, one row per entry
 
 `簡編`, ordered by 詞目id, then by the order `records.build` emitted the
