@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from kautian.build_detail import generator_commit, sha256
+from kautian.meta import generator_commit, sha256
 from kautian.detail import container
 from kautian.relations import records, source
 
