@@ -25,22 +25,14 @@ Usage:
 """
 
 import argparse
-import hashlib
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from kautian.meta import sha256
 from kautian.opt import container, jsonio
-
-
-def sha256(path):
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def load_dataset(arguments):

@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from kautian.build_detail import generator_commit, sha256
+from kautian.meta import generator_commit, sha256
 from kautian.kind import records, source
 
 
